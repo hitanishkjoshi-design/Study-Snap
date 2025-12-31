@@ -1,0 +1,7 @@
+{
+  "name": "StudySnap AI",
+  "description": "Personalized AI-powered study assistant for college students. OCR answer grading, YouTube to structured notes, and a secure StudyVault.",
+  "requestFramePermissions": [
+    "camera"
+  ]
+}
