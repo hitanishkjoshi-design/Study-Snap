@@ -46,8 +46,6 @@ interface VaultDoc {
   size: string;
 }
 
-const GOOGLE_CLIENT_ID = "YOUR_REAL_GOOGLE_CLIENT_ID.apps.googleusercontent.com";
-
 const App: React.FC = () => {
   const [currentRoute, setCurrentRoute] = useState<AppRoute>(AppRoute.DASHBOARD);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
@@ -55,7 +53,7 @@ const App: React.FC = () => {
     const saved = localStorage.getItem('studysnap_user');
     return saved ? JSON.parse(saved) : null;
   });
-  const [showMockLogin, setShowMockLogin] = useState(false);
+  
   const [mockName, setMockName] = useState('');
   const [mockUni, setMockUni] = useState('');
   const [mockGender, setMockGender] = useState('Prefer not to say');
@@ -136,65 +134,6 @@ const App: React.FC = () => {
     }
   };
 
-  const handleGoogleCredentialResponse = (response: any) => {
-    try {
-      const base64Url = response.credential.split('.')[1];
-      const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
-      const jsonPayload = decodeURIComponent(atob(base64).split('').map(function(c) {
-          return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2);
-      }).join(''));
-      const payload = JSON.parse(jsonPayload);
-      
-      const userData: UserData = {
-        name: payload.name,
-        email: payload.email,
-        picture: payload.picture,
-        university: "", 
-        gender: payload.gender || "Prefer not to say", // Google doesn't usually provide gender in ID token without extra scopes
-        given_name: payload.given_name
-      };
-
-      const savedUser = localStorage.getItem('studysnap_user');
-      if (savedUser) {
-        const parsed = JSON.parse(savedUser);
-        if (parsed.email === userData.email) {
-          if (parsed.university) userData.university = parsed.university;
-          if (parsed.gender) userData.gender = parsed.gender;
-        }
-      }
-
-      setUser(userData);
-      // Only show prompt if university OR gender is missing/default
-      if (!userData.university || userData.gender === "Prefer not to say") setShowUniPrompt(true);
-    } catch (err) {
-      console.error("Failed to parse Google credential", err);
-    }
-  };
-
-  useEffect(() => {
-    const initGsi = () => {
-      if (typeof (window as any).google !== 'undefined' && (window as any).google.accounts) {
-        (window as any).google.accounts.id.initialize({
-          client_id: GOOGLE_CLIENT_ID,
-          callback: handleGoogleCredentialResponse,
-          auto_select: false,
-        });
-        const btnDiv = document.getElementById("google-btn-container");
-        if (btnDiv) {
-          (window as any).google.accounts.id.renderButton(btnDiv, {
-            theme: isDark ? "filled_blue" : "outline",
-            size: "large",
-            width: "320",
-            shape: "pill",
-            text: "signin_with"
-          });
-        }
-      }
-    };
-    const timer = setTimeout(initGsi, 1500);
-    return () => clearTimeout(timer);
-  }, [isDark, user]);
-
   const handleMockLoginSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!mockName.trim() || !mockUni.trim()) return;
@@ -207,7 +146,6 @@ const App: React.FC = () => {
       gender: mockGender,
       given_name: first
     });
-    setShowMockLogin(false);
   };
 
   const handleUniPromptSubmit = (e: React.FormEvent) => {
@@ -226,7 +164,6 @@ const App: React.FC = () => {
 
   const handleLogout = () => {
     setUser(null);
-    setShowMockLogin(false);
     setMockName('');
     setMockUni('');
     setMockGender('Prefer not to say');
@@ -277,7 +214,7 @@ const App: React.FC = () => {
           <div className="p-8 max-w-6xl mx-auto text-left">
             <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-12 gap-6">
               <div>
-                <h1 className="text-4xl font-bold text-gray-900 dark:text-white mb-2 tracking-tight">Welcome back, {user?.given_name || user?.name.split(' ')[0]}!</h1>
+                <h1 className="text-4xl font-bold text-gray-900 dark:text-white mb-2 tracking-tight">Welcome, {user?.given_name || user?.name.split(' ')[0]}!</h1>
                 <p className="text-gray-500 dark:text-gray-400 flex items-center gap-2 italic">
                   <Sparkles size={16} className="text-nirma-orange" />
                   Your academic assistant for {user?.university || 'your university'} is ready.
@@ -418,23 +355,12 @@ const App: React.FC = () => {
                 </div>
                 <Button fullWidth type="submit">Complete Setup</Button>
               </form>
-            ) : !showMockLogin ? (
-              <>
-                <div id="google-btn-container" className="w-full flex justify-center min-h-[50px]"></div>
-                <div className="flex items-center w-full gap-4">
-                  <div className="h-px bg-gray-100 dark:bg-slate-800 flex-grow"></div>
-                  <span className="text-[10px] text-gray-400 dark:text-slate-500 font-bold uppercase tracking-widest">OR</span>
-                  <div className="h-px bg-gray-100 dark:bg-slate-800 flex-grow"></div>
-                </div>
-                <button 
-                  onClick={() => setShowMockLogin(true)}
-                  className="w-full py-3 rounded-xl border border-gray-200 dark:border-slate-700 text-sm font-semibold text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-slate-800 transition-colors flex items-center justify-center gap-2"
-                >
-                  <UserIcon size={18} /> Continue as Guest
-                </button>
-              </>
             ) : (
               <form onSubmit={handleMockLoginSubmit} className="w-full space-y-4 text-left">
+                <div className="mb-4 text-center">
+                  <h2 className="text-lg font-bold dark:text-white mb-1">Create Your Account</h2>
+                  <p className="text-sm text-gray-500 dark:text-gray-400">Enter your details to access your workspace.</p>
+                </div>
                 <div>
                   <label className="block text-xs font-bold text-gray-400 dark:text-slate-500 uppercase mb-1 ml-1">Full Name</label>
                   <div className="relative">
@@ -481,13 +407,6 @@ const App: React.FC = () => {
                   </div>
                 </div>
                 <Button fullWidth type="submit">Enter Workspace</Button>
-                <button 
-                  type="button"
-                  onClick={() => setShowMockLogin(false)}
-                  className="w-full text-xs text-center text-gray-400 hover:text-gray-600 transition-colors"
-                >
-                  Back to Sign-In
-                </button>
               </form>
             )}
           </div>
